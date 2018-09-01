@@ -459,17 +459,17 @@ def get_concatenated_heatmap(heats, info, smpl_per_tick=100):
     #plt.show()
     return ans
 
-def get_midi_map(path, maxlength=240):
+def get_midi_map(path, smpls=100):
     midi = analyze_midi(path)
     info = get_base_info(midi)
     heats = []
     for i in midi[1:]: heats.append(track_to_heatmap(i))
-    hmap = get_concatenated_heatmap(heats, info)
+    hmap = get_concatenated_heatmap(heats, info, smpl_per_tick=smpls)
     return hmap
 
 if __name__ == '__main__':
     midi = analyze_midi('data/midi_test/1.mid')
-    midi_map = get_midi_map('data/midi_test/1.mid', maxlength=240)
+    midi_map = get_midi_map('data/midi_test/1.mid', smpls=100)
     plt.imshow(midi_map[:, :500])
     plt.show()
     #convert_midi_insts_to_piano('203.mid', '204.mid', category=5)

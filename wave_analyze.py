@@ -1,6 +1,7 @@
 import wave
 import numpy as np
 import math
+import cv2
 from scipy.fftpack import fft
 import matplotlib.pyplot as plt
 from pydub import AudioSegment
@@ -64,7 +65,7 @@ def calc_line(x1, x2, y1, y2):
     b = y1 - k * x1
     return k, b
     
-def sample_curve(x, y, smin=0, smax=128, d=0.5, subsmpl=4, zero_division=1e-8):
+def sample_curve(x, y, smin=0, smax=128, d=0.5, subsmpl=4, zero_division=1e-8, m_threshold = 1):
     x = np.array(x)
     y = np.array(y)
     smpl = math.ceil((smax - smin) / d)
@@ -81,18 +82,32 @@ def sample_curve(x, y, smin=0, smax=128, d=0.5, subsmpl=4, zero_division=1e-8):
             sup = i
             break
     if inf == 0:
-        if x[inf] == smin: x[inf] += zero_division
+        #if x[inf] == smin: x[inf] += zero_division
+        
+        if x[0] - smin > m_threshold:
+            x = np.concatenate(([x[0] - m_threshold], x))
+            y = np.concatenate(([0], y))
+            #inf += 1
+            sup += 1
+        
         x = np.concatenate(([smin], x))
         y = np.concatenate(([0], y))
         inf += 1
         sup += 1
     if sup == len(x):
         #if x[sup] == smax: x[sup] -= zero_division
+        
+        if x[-1] + m_threshold < smax:
+            x = np.concatenate((x, [x[-1] + m_threshold]))
+            y = np.concatenate((y, [0]))
+            sup += 1
+        
         x = np.concatenate((x, [smax]))
         y = np.concatenate((y, [0]))
     x = x[inf - 1: sup + 1]
     y = y[inf - 1: sup + 1]
-    
+    #for i, j in zip(x, y):
+    #    print(i, j)
     x_cur = 1
     sub_cur = 0
     k_cur, b_cur = calc_line(x[x_cur - 1], x[x_cur], y[x_cur - 1], y[x_cur])
@@ -133,9 +148,9 @@ def timewise_fft(wave, enc=44100, sep=441, smpls=256):
         ans[:, i] = smpl[:, 0]
     return ans
 
-def get_fft_map(path, reader=read_mp3, channel=0):
+def get_fft_map(path, reader=read_mp3, channel=0, sep=441):
     wavdata, params = reader(path)
-    fft_map = timewise_fft(wavdata[0][:-2], enc=params['frame_rate'])
+    fft_map = timewise_fft(wavdata[0][:-2], enc=params['frame_rate'], sep=sep)
     return fft_map
     
 if __name__ == '__main__':
@@ -146,3 +161,4 @@ if __name__ == '__main__':
     path = 'data/midi_test/1.mp3'
     fft_map = get_fft_map(path)
     plt.imshow(fft_map[:, :500]); plt.show()
+    cv2.imwrite('kai.bmp', fft_map / 5000)
