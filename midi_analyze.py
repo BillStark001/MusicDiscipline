@@ -400,6 +400,7 @@ def track_to_heatmap(track, maxlength=240):
             i_cur[c_cur] = inst_map[i[3]['instrument']]
             #print(i_cur[c_cur])
         if i[2] == 8 or i[2] == 9 or i[2] == 10:
+            if i[2] == 8: i[3]['strength'] = 0
             note = i[3]['note'][0] * 12 + i[3]['note'][1]
             map_map[(c_cur, i_cur[c_cur])][note, i[0]: stop_tick] = i[3]['strength']
 
@@ -467,6 +468,7 @@ def get_midi_map(path, maxlength=240):
     return hmap
 
 if __name__ == '__main__':
+    midi = analyze_midi('data/midi_test/1.mid')
     midi_map = get_midi_map('data/midi_test/1.mid', maxlength=240)
     plt.imshow(midi_map[:, :500])
     plt.show()

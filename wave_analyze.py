@@ -57,9 +57,59 @@ def int2note(x):
     x1, x2=math.floor(x/12), int(x%12)
     res=letter[x2]+str(x1)+ascend[x2]
     return res
+
+def calc_line(x1, x2, y1, y2):
+    k = (y2 - y1) / (x2 - x1)
+    if x1 == x2: k = 0
+    b = y1 - k * x1
+    return k, b
     
-def sample_curve(x, y, smpl=256, d=0.5, d_min = 0.005):
+def sample_curve(x, y, smin=0, smax=128, d=0.5, subsmpl=4, zero_division=1e-8):
+    x = np.array(x)
+    y = np.array(y)
+    smpl = math.ceil((smax - smin) / d)
     ans = np.zeros(smpl)
+    subs = []
+    sup = len(x)
+    inf = len(x)
+    for i in range(len(x)): 
+        if x[i] >= smin: 
+            inf = i
+            break
+    for i in range(len(x)): 
+        if x[i] >= smax: 
+            sup = i
+            break
+    if inf == 0:
+        if x[inf] == smin: x[inf] += zero_division
+        x = np.concatenate(([smin], x))
+        y = np.concatenate(([0], y))
+        inf += 1
+        sup += 1
+    if sup == len(x):
+        #if x[sup] == smax: x[sup] -= zero_division
+        x = np.concatenate((x, [smax]))
+        y = np.concatenate((y, [0]))
+    x = x[inf - 1: sup + 1]
+    y = y[inf - 1: sup + 1]
+    
+    x_cur = 1
+    sub_cur = 0
+    k_cur, b_cur = calc_line(x[x_cur - 1], x[x_cur], y[x_cur - 1], y[x_cur])
+    for i in np.arange(smin, smax, d):#/subsmpl):
+        #print(i)
+        while i > x[x_cur]: 
+            x_cur += 1
+            k_cur = (y[x_cur] - y[x_cur - 1]) / (x[x_cur] - x[x_cur - 1])
+            if x[x_cur] == x[x_cur - 1]: k_cur = 0
+            b_cur = y[x_cur - 1] - k_cur * x[x_cur - 1]
+        subs = k_cur * i + b_cur
+        #subs.append(k_cur * i + b_cur)
+        #if len(subs) == subsmpl:
+        ans[sub_cur] = subs#np.mean(np.array(subs))
+        sub_cur += 1
+        #    subs = 0#[]
+    '''
     #for i in x: print(i)
     for i in range(len(x)-1):
         x_cur, y_cur = x[i], y[i]
@@ -69,14 +119,15 @@ def sample_curve(x, y, smpl=256, d=0.5, d_min = 0.005):
         #print(x_pos, x_sub)
         ans[x_pos] += y_cur * (1 - x_sub)
         ans[x_pos + 1] += y_cur * x_sub
+    '''
     return ans
     
 def timewise_fft(wave, enc=44100, sep=441, smpls=256):
     ans = np.zeros((smpls, math.ceil(len(wave) / sep)))
-    for i in tqdm(range(ans.shape[1])):
+    for i in tqdm(range(ans.shape[1]), desc='fft  ', ncols=64):
         wave_cur = wave[sep * i: sep * (i + 1)] 
         fft_y, fft_x = wavfft(wave_cur, enc)
-        smpl = sample_curve(fft_x, fft_y, smpl=smpls, d=128/smpls).reshape((smpls, 1))
+        smpl = sample_curve(fft_x, fft_y, smin=0, smax=128, d=128/smpls, subsmpl=1).reshape((smpls, 1))
         #plt.plot(np.arange(smpl.size) / 2, smpl, linewidth=0.7)
         #plt.show()
         ans[:, i] = smpl[:, 0]
@@ -88,6 +139,10 @@ def get_fft_map(path, reader=read_mp3, channel=0):
     return fft_map
     
 if __name__ == '__main__':
+    #c = np.arange(0, 128, 2)
+    #c = np.concatenate((c[:20], c[-20:]))
+    #d = np.random.random(c.shape)
+    #a = sample_curve(c, d)
     path = 'data/midi_test/1.mp3'
     fft_map = get_fft_map(path)
     plt.imshow(fft_map[:, :500]); plt.show()
