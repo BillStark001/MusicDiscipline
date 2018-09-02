@@ -159,6 +159,6 @@ if __name__ == '__main__':
     #d = np.random.random(c.shape)
     #a = sample_curve(c, d)
     path = 'data/midi_test/1.mp3'
-    fft_map = get_fft_map(path)
+    fft_map = get_fft_map(path, sep=882)
     plt.imshow(fft_map[:, :500]); plt.show()
     cv2.imwrite('kai.bmp', fft_map / 5000)

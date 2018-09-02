@@ -29,30 +29,33 @@ with open(load_sch, 'rb') as f:
 #sch = sch[173:]
 
 midi_division = 1#256
-fft_division = midi_division * 5000
+fft_division = midi_division * 7500
+fft_comp_division = fft_division * 2.5
 
 def gen_file_names(s, category=8):
     midi_name = 'midi/{}_midi.bmp'.format(s)
     midi_temp_name = []
     wave_temp_name = []
     wave_name = []
+    wave_comp_name = []
     for i in range(category):
         midi_temp_name.append('temp/{}_midi_temp_{:0>4}.mid'.format(s, i))
         wave_temp_name.append('temp/{}_midi_temp_{:0>4}.mp3'.format(s, i))
         wave_name.append('wave/{}_wave_{:0>4}.bmp'.format(s, i))
-    return midi_name, midi_temp_name, wave_temp_name, wave_name
+        wave_comp_name.append('wave/{}_wave_comp_{:0>4}.bmp'.format(s, i))
+    return midi_name, midi_temp_name, wave_temp_name, wave_name, wave_comp_name
 
 for i in sch:
     sch_gen.append(gen_file_names(i))
-    
+
 for i in tqdm(range(len(sch)), desc='file ', ncols=64):
-    midi_map = midi.get_midi_map(load_path + sch[i] + '.mid', smpls=50)
-    midi_map = midi_map / midi_division
-    cv2.imwrite(save_path + sch_gen[i][0], midi_map)
+    #midi_map = midi.get_midi_map(load_path + sch[i] + '.mid', smpls=25)
+    #midi_map = midi_map / midi_division
+    #cv2.imwrite(save_path + sch_gen[i][0], midi_map)
     
     #for j in range(len(sch_gen[i][1])):
     #    midi.convert_midi_insts_to_piano(load_path + sch[i] + '.mid', save_path + sch_gen[i][1][j], category=j)
-    
+    '''
     for j in tqdm(range(len(sch_gen[i][1])), desc='inst ', ncols=64):
         try:
             wave_map = wave.get_fft_map(save_path + sch_gen[i][2][j], sep=882)
@@ -60,3 +63,13 @@ for i in tqdm(range(len(sch)), desc='file ', ncols=64):
             continue
         wave_map = wave_map / fft_division
         cv2.imwrite(save_path + sch_gen[i][3][j], wave_map)
+    '''
+    
+    for j in tqdm(range(len(sch_gen[i][1])), desc='inst ', ncols=64):
+        try:
+            wave_map = wave.get_fft_map(save_path + sch_gen[i][2][j], sep=2205)
+        except:
+            continue
+        wave_map = wave_map / fft_comp_division
+        cv2.imwrite(save_path + sch_gen[i][4][j], wave_map)
+    

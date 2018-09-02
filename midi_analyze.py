@@ -462,6 +462,7 @@ def get_concatenated_heatmap(heats, info, smpl_per_tick=100):
 def get_midi_map(path, smpls=100):
     midi = analyze_midi(path)
     info = get_base_info(midi)
+    #print(info)
     heats = []
     for i in midi[1:]: heats.append(track_to_heatmap(i))
     hmap = get_concatenated_heatmap(heats, info, smpl_per_tick=smpls)
