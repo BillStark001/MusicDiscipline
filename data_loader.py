@@ -36,7 +36,7 @@ wave = np.zeros((256, 0))
 comp = np.zeros((256, 0))
 point = 0
     
-def read_data(f=50, i=0, r=False):
+def read_data(f=240, i=0, r=False):
     global midi, wave, comp
     m_temp = cv2.imread(sch_gen[f][0], cv2.IMREAD_GRAYSCALE)
     w_temp = cv2.imread(sch_gen[f][1][i], cv2.IMREAD_GRAYSCALE)
@@ -45,12 +45,15 @@ def read_data(f=50, i=0, r=False):
     #print(m_temp.shape, w_temp.shape, c_temp.shape)
     sp = min(m_temp.shape[1], w_temp.shape[1])
     sp = min(sp, c_temp.shape[1])
-    if r: return m_temp[:, :sp], w_temp[:, :sp], c_temp[:, :sp]
-    midi = np.concatenate((midi, m_temp[:, :sp]), axis=1)
-    wave = np.concatenate((wave, w_temp[:, :sp]), axis=1)
-    comp = np.concatenate((comp, c_temp[:, :sp]), axis=1)
+    m_temp = cv2.resize(m_temp, (sp, 128))
+    w_temp = cv2.resize(w_temp, (sp, 256))
+    c_temp = cv2.resize(c_temp, (sp, 256))
+    if r: return m_temp, w_temp, c_temp
+    midi = np.concatenate((midi, m_temp), axis=1)
+    wave = np.concatenate((wave, w_temp), axis=1)
+    comp = np.concatenate((comp, c_temp), axis=1)
 
-#read_data()
+m, w, c = read_data(r=True)
 
 def gen_data(length=25, batch_size=32):
     global midi, wave, comp, point
