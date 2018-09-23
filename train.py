@@ -9,4 +9,4 @@ import data_loader
 import models
 
 model = models.LSGAN(data_loader=data_loader.gen_data)
-model.train(10)
+model.train(10000)
