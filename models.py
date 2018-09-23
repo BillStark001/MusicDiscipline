@@ -42,7 +42,7 @@ class LSGAN():
     def __init__(self, data_loader, optimizer=Adam(0.0002, 0.5)):
         
         self.data_loader = data_loader
-        optimizer = optimizer
+        self.optimizer = optimizer
 
         #Build Generator
         self.generator = generator()
@@ -53,7 +53,7 @@ class LSGAN():
         #Build Discriminator
         self.discriminator = discriminator()
         self.discriminator.compile(loss='mse',
-            optimizer=optimizer,
+            optimizer=self.optimizer,
             metrics=['accuracy'])
         self.discriminator.trainable = False
         
@@ -62,7 +62,23 @@ class LSGAN():
         gen = self.generator(seq_in)
         valid = self.discriminator(gen)
         self.combined = Model(seq_in, valid)
-        self.combined.compile(loss='mse', optimizer=optimizer)
+        self.combined.compile(loss='mse', optimizer=self.optimizer)
+        
+    def lr_schedule(self, epoch):
+        lr = 0.0005
+        if epoch > 1300:
+            lr **= -3
+        elif epoch > 1000:
+            lr **= -2.5
+        elif epoch > 700:
+            lr **= -2
+        elif epoch > 500:
+            lr **= -1.5
+        elif epoch > 250:
+            lr **= -1
+        elif epoch > 125:
+            lr **= -0.5
+        return lr
 
     def train(self, epochs, batch_size=48, seq_length=seq_length):
         
@@ -74,6 +90,10 @@ class LSGAN():
         fake = np.zeros((batch_size, 1))
 
         for epoch in range(epochs):
+            
+            #Assign Learning Rate
+            lr_cur = K.get_value(self.optimizer.lr)
+            K.set_value(self.optimizer.lr, self.lr_schedule(epoch))
             
             X, Y = next(data_loader)
 
@@ -94,7 +114,7 @@ class LSGAN():
             g_loss = self.combined.train_on_batch(X, valid)
             
             # Plot the progress
-            print ("Epoch %d [D loss: %f, acc.: %.2f%%] [G loss: %f]" % (epoch, d_loss[0], 100*d_loss[1], g_loss))
+            print ("Epoch %d LR %f [D loss: %f, acc.: %.2f%%] [G loss: %f]" % (epoch, lr_cur, d_loss[0], 100*d_loss[1], g_loss))
     
     def save_weights(self, path):
         self.combined.save_weights(path)
