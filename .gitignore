@@ -3,3 +3,4 @@ data/midis
 data/midi_orig
 data/*.html
 *.pyc
+*.h5

@@ -77,8 +77,8 @@ def gen_data(length=25, batch_size=32):
             y.append(midi[:, point: point + length].transpose(1, 0))
             point += length
             #print('kai: point=%d, i=%d'%(point, i))
-        x = np.array(x)
-        y = np.array(y)
+        x = np.array(x)/256
+        y = np.array(y)/256
         #print('kang: point=%d'%point)
         yield x, y
     

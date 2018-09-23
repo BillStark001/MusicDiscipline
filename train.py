@@ -8,5 +8,10 @@ Created on Sun Sep 23 22:08:33 2018
 import data_loader
 import models
 
+weights_path = 'weights.h5'
+
 model = models.LSGAN(data_loader=data_loader.gen_data)
-model.train(10000)
+
+if __name__ == '__main__':
+    model.train(1200)
+    model.save_weights(weights_path)

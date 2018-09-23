@@ -95,6 +95,15 @@ class LSGAN():
             
             # Plot the progress
             print ("Epoch %d [D loss: %f, acc.: %.2f%%] [G loss: %f]" % (epoch, d_loss[0], 100*d_loss[1], g_loss))
+    
+    def save_weights(self, path):
+        self.combined.save_weights(path)
+        
+    def load_weights(self, path):
+        self.combined.load_weights(path)
+        
+    def predict(self, seq):
+        return self.generator.predict(seq)
     '''
             # If at save interval => save generated image samples
             #if epoch % sample_interval == 0:
