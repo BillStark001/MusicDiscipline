@@ -70,6 +70,7 @@ def sample_curve(x, y, smin=0, smax=128, d=0.5, subsmpl=4, zero_division=1e-8, m
     y = np.array(y)
     smpl = math.ceil((smax - smin) / d)
     ans = np.zeros(smpl)
+    if x.size == 0: return ans
     subs = []
     sup = len(x)
     inf = len(x)
@@ -83,7 +84,6 @@ def sample_curve(x, y, smin=0, smax=128, d=0.5, subsmpl=4, zero_division=1e-8, m
             break
     if inf == 0:
         #if x[inf] == smin: x[inf] += zero_division
-        
         if x[0] - smin > m_threshold:
             x = np.concatenate(([x[0] - m_threshold], x))
             y = np.concatenate(([0], y))

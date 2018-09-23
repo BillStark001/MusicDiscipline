@@ -26,6 +26,7 @@ sch_gen = []
 with open(load_sch, 'rb') as f:
     sch = pickle.load(f)
 
+#sch = ['K412']
 #sch = sch[173:]
 
 midi_division = 1#256
@@ -66,10 +67,12 @@ for i in tqdm(range(len(sch)), desc='file ', ncols=64):
     '''
     
     for j in tqdm(range(len(sch_gen[i][1])), desc='inst ', ncols=64):
-        try:
-            wave_map = wave.get_fft_map(save_path + sch_gen[i][2][j], sep=2205)
-        except:
-            continue
+        #try:
+        wave_map = wave.get_fft_map(save_path + sch_gen[i][2][j], sep=2205)
+        #except:
+            #continue
         wave_map = wave_map / fft_comp_division
-        cv2.imwrite(save_path + sch_gen[i][4][j], wave_map)
+        #print(wave_map.shape)
+        x = cv2.imwrite(save_path + sch_gen[i][4][j], wave_map)
+        #print(x)
     
