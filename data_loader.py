@@ -56,6 +56,7 @@ def read_data(f=240, i=0, r=False):
 m, w, c = read_data(r=True)
 
 def gen_data(length=25, batch_size=32):
+    print('g')
     global midi, wave, comp, point
     x = []
     y = []
@@ -64,10 +65,18 @@ def gen_data(length=25, batch_size=32):
             midi = midi[point:]
             wave = wave[point:]
             comp = comp[point:]
-            read_data()#(f=np.random.randint(len(sch)), i=np.random.randint(8))
+            read_data(f=np.random.randint(len(sch)), i=np.random.randint(8))
             point = 0
-        x.append(np.array((wave[:, point: point + length], comp[:, point: point + length])).reshape(length, 256, 2))
-        y.append(midi[:, point: point + length].reshape(length, 128))
+        x.append(np.array((wave[:, point: point + length], comp[:, point: point + length])).reshape(512, length).transpose(1, 0))
+        y.append(midi[:, point: point + length].transpose(1, 0))
         point += length
+        print('kai: point=%d, i=%d'%(point, i))
+    x = np.array(x)
+    y = np.array(y)
+    print('kang: point=%d'%point)
     yield x, y
     
+if __name__ == '__main__':
+    g = gen_data()
+    while True:
+        x, y = next(g)

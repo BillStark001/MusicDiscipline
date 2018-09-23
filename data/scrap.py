@@ -54,12 +54,10 @@ def get_source_htmls():
     return sources_
                 
 def download(url, d, name):
-    #print(url)
     try:
         os.mkdir(d)
     except:
         pass
-    #print(d)
     print(name)
     def Schedule(a,b,c):
         '''''
