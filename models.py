@@ -13,7 +13,7 @@ from keras.models import Model
 from keras.layers import Dense, LSTM, Dropout, Activation, Input
 from keras.optimizers import Adam
 
-seq_length = 25
+seq_length = 30
 data_dims_g = (seq_length, 512)
 data_dims_d = (seq_length, 128)
 
@@ -64,7 +64,7 @@ class LSGAN():
         self.combined = Model(seq_in, valid)
         self.combined.compile(loss='mse', optimizer=optimizer)
 
-    def train(self, epochs, batch_size=32, seq_length=25):
+    def train(self, epochs, batch_size=48, seq_length=seq_length):
         
         #Load Data
         data_loader = self.data_loader(length=seq_length, batch_size=batch_size)

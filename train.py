@@ -13,5 +13,5 @@ weights_path = 'weights.h5'
 model = models.LSGAN(data_loader=data_loader.gen_data)
 
 if __name__ == '__main__':
-    model.train(1200)
+    model.train(2000)
     model.save_weights(weights_path)

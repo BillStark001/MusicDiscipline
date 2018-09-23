@@ -78,11 +78,10 @@ def gen_data(length=25, batch_size=32):
             point += length
             #print('kai: point=%d, i=%d'%(point, i))
         x = np.array(x)/256
-        y = np.array(y)/256
+        y = np.array(y)/128
         #print('kang: point=%d'%point)
         yield x, y
     
 if __name__ == '__main__':
     g = gen_data()
-    while True:
-        x, y = next(g)
+    x, y = next(g)
