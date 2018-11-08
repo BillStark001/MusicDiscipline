@@ -13,29 +13,37 @@ from keras.models import Model
 from keras.layers import Dense, LSTM, Dropout, Activation, Input
 from keras.optimizers import Adam
 
-seq_length = 30
+seq_length = 50
 data_dims_g = (seq_length, 512)
 data_dims_d = (seq_length, 128)
 
 def generator():
     seq_in = Input(shape=data_dims_g, name='in__')
-    x = LSTM(256, return_sequences=True, name='lstm_256')(seq_in)
-    x = Dropout(0.5)(x)
-    seq_out = LSTM(128, return_sequences=True, name='out__')(x)
+    x = LSTM(256, return_sequences=True, name='lstm_256', use_bias=False)(seq_in)
+    #x = Dropout(0.5)(x)
+    seq_out = LSTM(128, return_sequences=True, name='out__', use_bias=False)(x)
     model = Model(seq_in, seq_out)
     return model
 
 def discriminator():
     seq_in = Input(shape=data_dims_d, name='in__')
     x = LSTM(64, return_sequences=True, name='lstm_64')(seq_in)
-    x = Dropout(0.5)(x)
+    #x = Dropout(0.5)(x)
     x = LSTM(32, return_sequences=False, name='lstm_32')(x)
-    x = Dropout(0.5)(x)
+    #x = Dropout(0.5)(x)
     out = Dense(1, name='out__')(x)
     model = Model(seq_in, out)
     return model
 
 #discriminator()(generator().output)
+    
+def zero_importance_loss(y_true, y_pred):
+    mse = K.square(y_pred - y_true)#, axis=-1
+    c = K.constant(1., shape=(1, 50, 128))
+    c10 = K.constant(10., shape=(1, 50, 128))
+    s = K.square(c - y_true)
+    ans = K.mean(mse * s * c10, axis=-1)
+    return ans
 
 class LSGAN():
     
@@ -46,9 +54,8 @@ class LSGAN():
 
         #Build Generator
         self.generator = generator()
-        #self.generator.compile(loss='mse',
-        #    optimizer=optimizer,
-        #    metrics=['accuracy'])
+        self.generator.compile(loss='mse',
+            optimizer=optimizer)
         
         #Build Discriminator
         self.discriminator = discriminator()
@@ -65,7 +72,8 @@ class LSGAN():
         self.combined.compile(loss='mse', optimizer=self.optimizer)
         
     def lr_schedule(self, epoch):
-        lr = 0.0005
+        lr_ans = 0.0005
+        lr = 10
         if epoch > 1300:
             lr **= -3
         elif epoch > 1000:
@@ -78,7 +86,9 @@ class LSGAN():
             lr **= -1
         elif epoch > 125:
             lr **= -0.5
-        return lr
+        else:
+            lr **= 0
+        return lr * lr_ans
 
     def train(self, epochs, batch_size=48, seq_length=seq_length):
         
@@ -115,6 +125,22 @@ class LSGAN():
             
             # Plot the progress
             print ("Epoch %d LR %f [D loss: %f, acc.: %.2f%%] [G loss: %f]" % (epoch, lr_cur, d_loss[0], 100*d_loss[1], g_loss))
+    
+    def train_gen(self, epochs, batch_size=48, seq_length=seq_length):
+        
+        data_loader = self.data_loader(length=seq_length, batch_size=1)
+        self.generator.fit_generator(data_loader, steps_per_epoch=batch_size, epochs=epochs)
+        '''
+        for epoch in range(epochs):
+            #Assign Learning Rate
+            lr_cur = K.get_value(self.optimizer.lr)
+            K.set_value(self.optimizer.lr, self.lr_schedule(epoch))
+            
+            X, Y = next(data_loader)
+            
+            g_loss = self.generator.train_on_batch(X, Y)
+            print ("Epoch %d LR %f [G loss: %f]" % (epoch, lr_cur, g_loss))
+        '''
     
     def save_weights(self, path):
         self.combined.save_weights(path)

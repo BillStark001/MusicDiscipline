@@ -78,9 +78,35 @@ def gen_data(length=25, batch_size=32):
             point += length
             #print('kai: point=%d, i=%d'%(point, i))
         x = np.array(x)/256
-        y = np.array(y)/128
+        y = np.array(y)#/128
+        y = y > 16
+        y = np.array(y, dtype='float64')
         #print('kang: point=%d'%point)
         yield x, y
+
+def gen_fake_data(length=25, batch_size=32):
+    #print('g')
+    while True:
+        global midi, wave, comp, point
+        x = []
+        y = []
+        for i in range(batch_size):
+            if point >= midi.shape[1] - length:
+                midi = midi[:, point:]
+                wave = wave[:, point:]
+                comp = comp[:, point:]
+                read_data(f=np.random.randint(len(sch)), i=np.random.randint(8))
+                point = 0
+            x.append(np.array((wave[:, point: point + length], comp[:, point: point + length])).reshape(512, length).transpose(1, 0))
+            y.append(midi[:, point: point + length].transpose(1, 0))
+            point += length
+            #print('kai: point=%d, i=%d'%(point, i))
+        x = np.array(x)/256
+        y = np.array(y)#/128
+        y = y > 16
+        y = np.array(y, dtype='float64')
+        #print('kang: point=%d'%point)
+        yield y, y
     
 if __name__ == '__main__':
     g = gen_data()
