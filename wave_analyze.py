@@ -1,12 +1,15 @@
+import os
 import wave
 import numpy as np
 import math
 import cv2
 from scipy.fftpack import fft
 import matplotlib.pyplot as plt
-from pydub import AudioSegment
 from tqdm import tqdm
+import soundfile as sf
+from collections import defaultdict
 
+'''
 def read_wav(path):
     f = wave.open(path, "rb")
     params = f.getparams()
@@ -23,6 +26,7 @@ def read_wav(path):
              }
     return wave_data, params
     
+from pydub import AudioSegment
 def read_mp3(path):
     wave_orig = AudioSegment.from_mp3(path)
     wave = wave_orig.get_array_of_samples()
@@ -34,6 +38,13 @@ def read_mp3(path):
               'channels': wave_orig.channels
              }
     return wave, params
+'''
+
+import librosa
+def read_file(path, sr=44100):
+    y, sr = librosa.load(path, sr=sr)
+    return [y], dict(frame_rate=sr)
+    
 
 def wavfft(wave, sample=44100):
     try:
@@ -148,18 +159,96 @@ def timewise_fft(wave, enc=44100, sep=441, smpls=256):
         ans[:, i] = smpl[:, 0]
     return ans
 
-def get_fft_map(path, reader=read_mp3, channel=0, sep=441):
-    wavdata, params = reader(path)
+def get_fft_map(path, sr=44100, channel=0, sep=441):
+    wavdata, params = read_file(path, sr=sr)
+    print(np.shape(wavdata), params)
     fft_map = timewise_fft(wavdata[0][:-2], enc=params['frame_rate'], sep=sep)
     return fft_map
+
+def sep_d53(fft_map, time_scale_f = 44100 / 4410, low_detach_t = 1, d5_t = (150, 154), d3_t = (143, 147), 
+            d5_low_duration_t = 4, d3_low_duration_t = 12, d53_error_f = 1):
     
+    fa = np.argmax(fft_map, axis=0)
+    fm = np.max(fft_map, 0)
+    fa[fm < low_detach_t] = 1
+    
+    fa_d5 = np.r_[np.logical_and(fa > d5_t[0], fa < d5_t[1]), np.array([False, False, False])]
+    fa_d3 = np.r_[np.logical_and(fa > d3_t[0], fa < d3_t[1]), np.array([False, False, False])]
+    fa_d5[1:] = np.logical_xor(fa_d5[1:], fa_d5[:-1])
+    fa_d3[1:] = np.logical_xor(fa_d3[1:], fa_d3[:-1])
+    fa_d5_where = np.where(fa_d5)[0].reshape((-1, 2))
+    fa_d3_where = np.where(fa_d3)[0].reshape((-1, 2))
+    fa_d5_where[..., 1] -= fa_d5_where[..., 0]
+    fa_d3_where[..., 1] -= fa_d3_where[..., 0]
+    fa_d5_pairs = [x for x in fa_d5_where if x[1] > d5_low_duration_t]
+    fa_d3_pairs = [x for x in fa_d3_where if x[1] > d3_low_duration_t]
+    
+    d5_list = [x[0] / time_scale_f for x in fa_d5_pairs if x[1] > d3_low_duration_t]
+    d3_list = [x[0] / time_scale_f for x in fa_d3_pairs]
+    d53_tmp_list = [x[0] / time_scale_f for x in fa_d5_pairs if x[1] <= d3_low_duration_t]
+    d53_list = []
+    d3_mask = [False] * len(d3_list)
+    for i in range(len(d3_list)):
+        judge_arr = [x for x in d53_tmp_list if x < d3_list[i] and np.abs(x-d3_list[i]) <= d53_error_f]
+        d3_mask[i] = len(judge_arr) > 0
+        if d3_mask[i]:
+            d53_list.append(judge_arr[0])
+    d3_list = [d3_list[i] for i in range(len(d3_list)) if not d3_mask[i]]
+    
+    return d5_list, d3_list, d53_list
+    
+src_path = 'G:/EJU_Original/听力/'
+dst_path = 'G:/EJU_Original/Listening_Decomp/{testtime}/'
+dst_pattern = dst_path + '{testtime}_{segno}.wav'
+
+src_lst = os.listdir(src_path)
+
+mapping_list = defaultdict(lambda: 'gshxd', {
+    (30, 14, 6): defaultdict(lambda: -1, 
+                             dict(np.array([[2 * (x + 4) for x in range(12)] + [x+ 35 for x in range(15)], list( range(1, 28) ) ]).T)
+                             ),
+    (27, 12, 0): defaultdict(lambda: -1, 
+                             dict(np.array([[2 * (x + 0) + 1 for x in range(12)] + [x+ 25 for x in range(15)], list( range(1, 28) ) ]).T)
+                             )
+    })
+
 if __name__ == '__main__':
-    #c = np.arange(0, 128, 2)
-    #c = np.concatenate((c[:20], c[-20:]))
-    #d = np.random.random(c.shape)
-    #a = sample_curve(c, d)
-    path = 'data/midi_test/1.mp3'
-    fft_map = get_fft_map(path, sep=4410)
-    plt.imshow(fft_map[:, :500]); plt.show()
-    fft_map = fft_map[:, :1000]
-    cv2.imwrite('441.bmp', fft_map / (2500 * 5))
+
+    filename = src_lst[-9]
+    path = src_path + filename
+    testtime = filename.strip('.m4a')
+    sr = 44100
+    sep = 4410
+    space_correction_t = 0.4
+    wavdata, params = read_file(path, sr=sr)
+    wavdata = wavdata[0]
+    fft_map = timewise_fft(wavdata, enc=sr, sep=sep)
+    sep_res = sep_d53(fft_map, time_scale_f=sr/sep)
+    merged_segs = sorted([[int((x - space_correction_t) * sr), 'd5'] for x in sep_res[0]] \
+                         + [[int((x - space_correction_t) * sr), 'd3'] for x in sep_res[1]] \
+                         + [[int((x - space_correction_t) * sr), 'd53'] for x in sep_res[2]] \
+        , key=lambda x: x[0])
+        
+    try:
+        os.makedirs(dst_path.format(testtime=testtime))
+    except Exception as e:
+        print(e)
+    
+    cur_list = mapping_list[tuple([len(x) for x in sep_res])]
+    if cur_list == 'gshxd':
+        print([len(x) for x in sep_res])
+        
+    for i in tqdm(range(len(merged_segs) + 1), desc='SGIO'):
+        if cur_list == 'gshxd':
+            segno = i
+        else:
+            segno = cur_list[i]
+            if segno == -1:
+                continue
+        cur_time = [0, 'dd'] if i == 0 else merged_segs[i - 1]
+        nxt_time = [wavdata.size, 'dd'] if i == len(merged_segs) else merged_segs[i]
+        print(cur_time, nxt_time)
+        sav_path = dst_pattern.format(testtime=testtime, segno=segno)
+        sf.write(sav_path, np.vstack([wavdata[max(0, cur_time[0]): max(0, nxt_time[0])]] * 2).T, samplerate=44100)
+
+
